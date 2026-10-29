@@ -1,6 +1,8 @@
 # Change Log
 
-### All notable changes to this project will be documented in this file.
+All notable changes to this project are documented in this file.
+
+## Requirements changes (scope-freeze audit trail)
 
 | Date       | Reason                                                                              | Impact                                                 |
 | ---------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------ |
@@ -11,3 +13,7 @@
 | 2026-10-29 | FR-5, FR-7, FR-10 were unclear                                                      | Clarified the wording only                             |
 | 2026-10-29 | FR-2 did not match the public seat map in FR-5                                      | Clarified FR-2 wording only                            |
 | 2026-10-29 | Problem statement said a failed payment releases the hold, which contradicted FR-15 | Updated 01-problem-statement.md, wording only          |
+
+## Application changes
+
+(Empty for now. Entries start when implementation begins in Phase 4.)
