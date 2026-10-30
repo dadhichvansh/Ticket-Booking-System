@@ -13,7 +13,7 @@
 - Alternatives: persist holds in PostgreSQL as the source of truth; Redis persistence (AOF)
 - Why: holds are short-lived (5 min) and the DB is the source of truth for confirmed bookings
 - Trade-offs: after a Redis restart, some users lose their hold and must retry; recovery logic must be correct (NFR-12, NFR-4)
-- Status: open. Will be defended or revised in Phase 2.
+- Status: closed (defended) on 2026-10-30. Section 5.2 of 03-system-design.md covers it: pay without a hold is rejected, payments already `started` continue, the PostgreSQL constraint decides, and an optional rebuild reduces conflicts. Revisit only if failure test 4 (restart Redis during the stampede) fails in Phase 4.
 
 ## D-3: Redis decides holds; PostgreSQL is the final judge for bookings
 
