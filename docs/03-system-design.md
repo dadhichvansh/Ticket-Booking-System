@@ -4,16 +4,16 @@
 
 ## 1. Components
 
-| Component                     | Job                                                                                   |
-| ----------------------------- | ------------------------------------------------------------------------------------- |
-| Browser (simple React page)   | Shows events and the seat map, sends requests                                         |
-| Nginx                         | Spreads incoming requests across the app copies                                       |
-| App (Node/Express), 2+ copies | Handles the API. Stateless: keeps nothing important in its own memory                 |
-| Redis                         | Seat holds (auto-expiring), seat-map cache, rate-limit counters                       |
-| PostgreSQL                    | Source of truth: users, events, seats, bookings, payments                             |
-| RabbitMQ                      | Holds background jobs safely (notifications, refund retries) with a dead-letter queue |
-| Worker                        | Reads jobs from RabbitMQ and runs them: sends notifications, retries refunds          |
-| Mock payment service          | Pretends to be a payment provider: succeeds, fails, or is slow                        |
+| Component                     | Job                                                                                                         |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Browser (simple React page)   | Shows events and the seat map, sends requests                                                               |
+| Nginx                         | Spreads incoming requests across the app copies                                                             |
+| App (Node/Express), 2+ copies | Handles the API. Stateless: keeps nothing important in its own memory                                       |
+| Redis                         | Seat holds (auto-expiring), seat-map cache, rate-limit counters                                             |
+| PostgreSQL                    | Source of truth: users, events, seats, bookings, payments, refunds, idempotency keys, notifications, outbox |
+| RabbitMQ                      | Holds background jobs safely (notifications, refund retries) with a dead-letter queue                       |
+| Worker                        | Reads jobs from RabbitMQ and runs them: sends notifications, retries refunds                                |
+| Mock payment service          | Pretends to be a payment provider: succeeds, fails, or is slow                                              |
 
 ## 2. Diagram
 
@@ -94,7 +94,9 @@ reconciliation handles the cases that remain.
 
 **Needs from the mock payment service:** a "check status by payment key"
 endpoint, plus the ability to be told to crash or time out on demand (A-2).
-This isn't new scope, it's what makes the failure tests possible.
+This isn't new scope, it's what makes the failure tests possible. It also
+keeps a list of every charge and refund it accepted, so tests can count real
+money movement (NFR-2, NFR-3).
 
 ### 5.2 Redis restarts and holds are lost (D-2, NFR-4)
 
@@ -191,7 +193,7 @@ seat may be free, but the user has not got their money back.
 **Rule 1: Record the intent first.**
 Cancelling saves, in one PostgreSQL transaction: booking -> `cancelled`, a
 refund record with status `pending` and a unique refund key (one per booking),
-and a "refund needed" outbox row. Only then is the job sent to RabbitMQ.
+and two outbox rows: 'refund needed' and 'notification needed'. Only then is the job sent to RabbitMQ.
 (Same "write first, queue second" rule as 5.1.)
 
 **Rule 2: The worker does the refund.**
@@ -223,7 +225,8 @@ key, same as the payment recovery in 5.1.
 **Rule 6: A lost queue message is recovered from PostgreSQL.**
 The recovery job also scans for refunds stuck in `pending` or `failed` that
 have no live job, and re-sends them. RabbitMQ can lose a message, but
-PostgreSQL remembers the obligation (NFR-2).
+PostgreSQL remembers the obligation (NFR-2). Refunds that used up the retry limit
+are marked `dead` (see 04) and the recovery job skips them. A person resolves them (FR-22).
 
 **Seat release:** the seat becomes available once the cancellation is saved
 (FR-20), not when the refund succeeds. The refund is about money, and the seat
