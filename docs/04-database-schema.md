@@ -7,7 +7,7 @@ Requirements: v1.0 (frozen)
 
 - IDs: `BIGINT GENERATED ALWAYS AS IDENTITY` (simple, fast, easy to read in logs).
 - Times: `TIMESTAMPTZ`, default `now()`.
-- Money: whole smallest units (`price_cents`), never floats.
+- Money: whole smallest units (`price_rupees`), never floats.
 - Statuses: `TEXT` + `CHECK` constraint (easier to change than a PG ENUM).
 
 ## Step 1: Core tables
@@ -15,7 +15,7 @@ Requirements: v1.0 (frozen)
 ```sql
 CREATE TABLE users (
   id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  email         TEXT NOT NULL UNIQUE,
+  email         TEXT NOT NULL UNIQUE CHECK (email = lower(email)),
   password_hash TEXT NOT NULL,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -24,7 +24,7 @@ CREATE TABLE events (
   id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   name        TEXT NOT NULL,
   starts_at   TIMESTAMPTZ NOT NULL,
-  price_cents INTEGER NOT NULL CHECK (price_cents >= 0),
+  price_rupees INTEGER NOT NULL CHECK (price_rupees >= 0),
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -106,7 +106,7 @@ CREATE TABLE payments (
   event_id     BIGINT NOT NULL,
   seat_id      BIGINT NOT NULL,
   booking_id   BIGINT UNIQUE REFERENCES bookings(id),  -- NULL until a booking exists
-  amount_cents INTEGER NOT NULL CHECK (amount_cents >= 0),
+  amount_rupees INTEGER NOT NULL CHECK (amount_rupees >= 0),
   status       TEXT NOT NULL CHECK (status IN ('started','succeeded','failed')),
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -130,7 +130,7 @@ CREATE TABLE refunds (
   booking_id   BIGINT NOT NULL UNIQUE REFERENCES bookings(id),  -- ONE refund per booking (NFR-3)
   payment_id   BIGINT NOT NULL REFERENCES payments(id),
   refund_key   TEXT NOT NULL UNIQUE,            -- sent to the payment service on every attempt
-  amount_cents INTEGER NOT NULL CHECK (amount_cents >= 0),
+  amount_rupees INTEGER NOT NULL CHECK (amount_rupees >= 0),
   status       TEXT NOT NULL CHECK (status IN ('pending','succeeded','failed','dead')),
   attempts     INTEGER NOT NULL DEFAULT 0,
   last_error   TEXT,
