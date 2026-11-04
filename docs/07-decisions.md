@@ -57,3 +57,66 @@
 - Alternatives: a free-text dedupe key; checking in app code before inserting; no outbox uniqueness
 - Why: `UNIQUE (booking_id, type)` on `notifications` and `outbox` lets PostgreSQL reject duplicates (FR-28), even when RabbitMQ delivers a job twice
 - Trade-offs: each booking gets at most one notification of each type. This is enough for v1, because a booking is confirmed, cancelled and refunded at most once each.
+
+## D-9: Login token is a signed token (JWT), checked without a database
+
+- Date: 2026-11-01
+- Alternatives: random session IDs stored in Redis; session IDs stored in PostgreSQL
+- Why: app copies must stay stateless (03 section 4). A signed token is verified by any copy with a shared secret, and it does not break when Redis restarts (NFR-12).
+- Trade-offs: a token cannot be cancelled before it expires (no logout list). Acceptable in v1, because roles, password reset and refresh tokens are out of scope.
+
+## D-10: Rate limiter lets requests through if Redis is unreachable
+
+- Date: 2026-11-01
+- Alternatives: reject requests when Redis is down; keep counters in each app copy's memory
+- Why: rejecting would create 5xx errors during a Redis restart (NFR-10, NFR-12). Per-copy counters would break the "stateless" rule and give wrong totals with 2+ copies.
+- Trade-offs: during a Redis outage there is no rate limiting for a short time. The PostgreSQL constraints still guard correctness.
+
+## D-11: Money is stored as whole rupees (INR), integers only
+
+- Date: 2026-11-01
+- Alternatives: paise as the smallest unit (what real payment gateways use); decimal/NUMERIC; floats
+- Why: v1 has no fractional prices, tax, coupons or partial refunds, so whole rupees are enough and need no conversion. Integers avoid float rounding bugs.
+- Trade-offs: if fractional amounts are ever needed, columns must be migrated to paise. A real gateway integration (parking lot item 4) would also need paise.
+
+## D-12: Passwords are hashed with argon2
+
+- Date: 2026-11-04
+- Alternatives: bcrypt
+- Why: argon2 is a modern password hash with no 72-byte input limit, and FR-3 only requires "hashed"
+- Trade-offs: it uses memory as well as CPU, so test users must be logged in gradually in Phase 4
+
+## D-13: After Redis grants a hold, the app checks PostgreSQL for a booking
+
+- Date: 2026-11-04
+- Alternatives: keep a "booked" set in Redis; do the PostgreSQL check before Redis for every request
+- Why: a confirmed booking deletes the hold key, so Redis alone cannot know the seat is booked (FR-8). Checking after the Redis step means only winners cost one indexed query, and losers still get a fast 409 (NFR-8).
+- Trade-offs: requests for already-booked seats still reach PostgreSQL. If Phase 4 shows this hurts, add a "booked" flag in Redis and log a new decision.
+
+## D-14: Hold requests also use the idempotency table in PostgreSQL
+
+- Date: 2026-11-04
+- Alternatives: rely only on Redis (a repeat by the same user for the same seat returns the same hold)
+- Why: FR-23 names hold explicitly, and 03 section 5.3 says all three endpoints use the same mechanism
+- Trade-offs: each hold request adds PostgreSQL writes on the hot path, which could threaten NFR-7. Measure in Phase 4. If it fails, revisit (for example, keep hold keys in Redis only).
+
+## D-15: While Redis is down, hold actions return 503 and PostgreSQL-only actions keep working
+
+- Date: 2026-11-04
+- Alternatives: fall back to holds in PostgreSQL; return 503 for everything
+- Why: a second hold system during an outage could disagree with Redis after it returns (NFR-4). Cancel and my bookings need only PostgreSQL, so they should keep working (NFR-12).
+- Trade-offs: users cannot take new holds during an outage. Seat-map fallback adds load on PostgreSQL for a short time.
+
+## D-16: The mock payment service keeps its own independent record
+
+- Date: 2026-11-04
+- Alternatives: store mock charges in the app's PostgreSQL
+- Why: NFR-2 and NFR-3 are about money moving. A separate record can prove it independently, and it survives a mock crash.
+- Trade-offs: one more small storage to run and reset between tests
+
+## D-17: No Prometheus or Grafana in v1; metrics are read from /metrics and k6
+
+- Date: 2026-11-04
+- Alternatives: add Prometheus and Grafana for second-by-second graphs; keep them in the Parking Lot
+- Why: the proof I keep for interviews and my resume comes from k6 results and saved `/metrics` snapshots taken before and after each benchmark. Two more containers would also add load on an 11.7 GB machine and could distort results (NFR-20).
+- Trade-offs: no graph of what happens second by second during the stampede or the failure tests. Only before and after totals, plus k6's own latency output.
