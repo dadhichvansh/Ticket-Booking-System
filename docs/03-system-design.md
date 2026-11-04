@@ -37,6 +37,7 @@ Worker -> Mock payment service (refund retries)
 1. App checks the user's token and rate limit.
 2. App asks Redis: "give seat X to this user, only if nobody has it, for 5 minutes."
 3. Redis says yes (return hold details) or no (return 409 immediately).
+4. Redis said yes: the app checks PostgreSQL for an active booking on this seat. If there is one, release the hold and return 409.
 
 **Flow 3: Pay and confirm**
 
@@ -291,6 +292,7 @@ runs one small Lua script, which Redis executes without interruption:
    - otherwise -> return "already has a hold" (FR-10)
 2. If `hold:{eventId}:{seatId}` exists -> return "taken" (409, FR-8).
 3. Otherwise set both keys with the 5-minute expiry -> return "ok".
+4. (App code, after the script) If PostgreSQL shows an active booking for the seat, run the release script and return "taken".
 
 Releasing a hold (FR-11) is also a script: delete both keys only if the stored
 owner is the caller. Otherwise a late release could delete someone else's hold.
@@ -324,4 +326,4 @@ benchmarks the IP limit is raised (A-5).
 ### 6.6 Restart marker
 
 On startup the app checks `redis:boot`. If missing, Redis was wiped: run the
-rebuild from 5.2, then set the marker.
+rebuild from 5.2, then set the marker. Only one app copy runs the rebuild, using a short SET NX lock. Other copies answer hold requests with 503 until the marker is set.
