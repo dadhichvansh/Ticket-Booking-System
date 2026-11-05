@@ -120,3 +120,10 @@
 - Alternatives: add Prometheus and Grafana for second-by-second graphs; keep them in the Parking Lot
 - Why: the proof I keep for interviews and my resume comes from k6 results and saved `/metrics` snapshots taken before and after each benchmark. Two more containers would also add load on an 11.7 GB machine and could distort results (NFR-20).
 - Trade-offs: no graph of what happens second by second during the stampede or the failure tests. Only before and after totals, plus k6's own latency output.
+
+## D-18: The naive baseline uses a `pending` booking row as its hold
+
+- Date: 2026-11-05
+- Alternatives: a separate holds table in PostgreSQL; a baseline with no holds at all
+- Why: the schema already has `pending` and the unique index, so the baseline needs no extra table and still cannot double book (NFR-1). It gives an honest "before" for the Redis benchmark (D-3).
+- Trade-offs: baseline-only code with a sweep query for expiry. It is deleted in M4. The final system never creates `pending` rows.
