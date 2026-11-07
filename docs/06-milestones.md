@@ -39,9 +39,9 @@ write `docker-compose.yml` with PostgreSQL, write the migration file from 04, wr
 
 Done when:
 
-- [ ] `docker compose up` starts PostgreSQL and the seed data loads.
-- [ ] All proof tests in 04 (Steps 1 to 3) pass.
-- [ ] Docker version and Docker memory limit are filled in 09-benchmarks.md.
+- [✅] `docker compose up` starts PostgreSQL and the seed data loads.
+- [✅] All proof tests in 04 (Steps 1 to 3) pass.
+- [✅] Docker version and Docker memory limit are filled in 09-benchmarks.md.
 
 ## M1: App skeleton, auth, browsing
 
