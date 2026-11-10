@@ -3,6 +3,7 @@ const ERROR_STATUS = {
   invalid_credentials: 401,
   unauthorized: 401,
   token_expired: 401,
+  not_found: 404,
   event_not_found: 404,
   email_taken: 409,
   rate_limited: 429,
