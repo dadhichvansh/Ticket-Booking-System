@@ -50,8 +50,8 @@ signup, login, events, event details, seat map (from PostgreSQL only, no cache y
 Done when:
 
 - [ ] Every endpoint in 05 sections 3 and 10.1 behaves as written, including error codes.
-- [ ] Passwords are stored hashed (check the table by hand).
-- [ ] Every response and every log line carries the correlation ID.
+- [✅] Passwords are stored hashed (check the table by hand).
+- [✅] Every response and every log line carries the correlation ID.
 
 ## M2: Mock payment service
 
