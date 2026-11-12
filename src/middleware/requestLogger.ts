@@ -12,9 +12,8 @@ export function requestLogger(
     if (req.originalUrl.startsWith('/health')) return; // 05 section 10.1
 
     const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
-    const route = req.route?.path
-      ? `${req.baseUrl}${req.route.path}`
-      : 'unmatched';
+    const base = (res.locals.baseUrl as string | undefined) ?? '';
+    const route = req.route?.path ? `${base}${req.route.path}` : 'unmatched';
     const data = {
       method: req.method,
       route,

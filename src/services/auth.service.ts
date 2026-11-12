@@ -3,7 +3,10 @@ import { query } from '../db.js';
 import { AppError } from '../errors.js';
 import type { Credentials } from '../utils/validate.js';
 
-type UserRow = { id: string; email: string };
+type UserRow = {
+  id: string;
+  email: string;
+};
 
 export async function signup({
   email,

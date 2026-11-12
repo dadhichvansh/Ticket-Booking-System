@@ -3,12 +3,7 @@ import { AppError } from '../errors.js';
 
 // Same body for signup and login (05 sections 3.1 and 3.2)
 export const credentialsSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .max(254)
-    .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Invalid email'),
+  email: z.email().trim().toLowerCase().max(254),
   password: z.string().min(8).max(72),
 });
 
