@@ -7,6 +7,7 @@ import { rememberBase } from './middleware/rememberBase.js';
 import { requireAuth } from './middleware/auth.js';
 import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './routes/auth.routes.js';
+import { eventsRouter } from './routes/events.routes.js';
 
 export const app = express();
 
@@ -16,6 +17,7 @@ app.use(requestLogger);
 app.use('/health', healthRouter);
 app.use(express.json({ limit: '10kb' }));
 app.use('/api/auth', rememberBase, authRouter);
+app.use('/api/events', rememberBase, eventsRouter);
 
 // TEMPORARY (Step 6 checks). Remove after Step 9.
 app.get('/api/_whoami', requireAuth, (req, res) => {

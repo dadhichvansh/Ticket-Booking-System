@@ -21,3 +21,9 @@ export function parseOrThrow<T>(schema: z.ZodType<T>, data: unknown): T {
   }
   return result.data;
 }
+
+// :eventId from the URL. Digits only, at most 18 digits, so it always fits in BIGINT.
+// Without the length limit, a 25-digit number would make PostgreSQL fail and return a 500.
+export const eventIdParamsSchema = z.object({
+  eventId: z.string().regex(/^\d{1,18}$/, 'must be a positive whole number'),
+});

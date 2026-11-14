@@ -13,7 +13,8 @@ export function requestLogger(
 
     const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
     const base = (res.locals.baseUrl as string | undefined) ?? '';
-    const route = req.route?.path ? `${base}${req.route.path}` : 'unmatched';
+    const full = req.route?.path ? `${base}${req.route.path}` : 'unmatched';
+    const route = full.length > 1 && full.endsWith('/') ? full.slice(0, -1) : full;
     const data = {
       method: req.method,
       route,
