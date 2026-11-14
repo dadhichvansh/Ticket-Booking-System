@@ -35,7 +35,7 @@ Requirements: v1.0 (frozen)
 ## M0: Setup
 
 Do: install Docker Desktop, set the WSL2 memory limit (`.wslconfig`),
-write `docker-compose.yml` with PostgreSQL, write the migration file from 04, write seed data (A-4).
+write `docker-compose.yaml` with PostgreSQL, write the migration file from 04, write seed data (A-4).
 
 Done when:
 
