@@ -18,3 +18,14 @@ export const getEventController = async (
   const event = await eventsService.getEvent(eventId);
   res.status(200).json({ event });
 };
+
+export const getSeatMapController = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { eventId } = parseOrThrow(eventIdParamsSchema, req.params);
+  const seatMap = await eventsService.getSeatMap(eventId);
+  // The browser must not add its own cache on top of ours (05 section 3.5)
+  res.set('Cache-Control', 'no-store');
+  res.status(200).json(seatMap);
+};
