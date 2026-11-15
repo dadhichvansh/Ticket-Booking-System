@@ -118,7 +118,7 @@
 
 - Date: 2026-11-04
 - Alternatives: add Prometheus and Grafana for second-by-second graphs; keep them in the Parking Lot
-- Why: the proof I keep for interviews and my resume comes from k6 results and saved `/metrics` snapshots taken before and after each benchmark. Two more containers would also add load on an 11.7 GB machine and could distort results (NFR-20).
+- Why: the proof I keep for interviews and my resume comes from k6 results and saved `/metrics` snapshots taken before and after each benchmark. Two more containers would also add load on an 12 GB machine and could distort results (NFR-20).
 - Trade-offs: no graph of what happens second by second during the stampede or the failure tests. Only before and after totals, plus k6's own latency output.
 
 ## D-18: The naive baseline uses a `pending` booking row as its hold
@@ -127,3 +127,31 @@
 - Alternatives: a separate holds table in PostgreSQL; a baseline with no holds at all
 - Why: the schema already has `pending` and the unique index, so the baseline needs no extra table and still cannot double book (NFR-1). It gives an honest "before" for the Redis benchmark (D-3).
 - Trade-offs: baseline-only code with a sweep query for expiry. It is deleted in M4. The final system never creates `pending` rows.
+
+## D-19: Plain `pg` with hand-written SQL, no ORM
+
+- Date: 2026-11-15
+- Alternatives: Prisma; another ORM or query builder
+- Why: the important parts of this system are raw SQL anyway: the partial unique indexes (D-6, D-7), guarded updates (`UPDATE ... WHERE status = 'confirmed'`) and `FOR UPDATE SKIP LOCKED` (04 outbox). An ORM would not remove that SQL and would add a second schema source next to `001_init.sql`. BIGINT ids come back from `pg` as strings, which matches the API (05 section 1). An ORM would also use extra RAM on an 12 GB machine (D-17).
+- Trade-offs: row types are written by hand, and a column rename must be changed in the SQL and the type. No generated migrations; `001_init.sql` stays the only schema file.
+
+## D-20: TypeScript, run with tsx in development and built with tsc
+
+- Date: 2026-11-15
+- Alternatives: plain JavaScript; ts-node
+- Why: types catch mistakes around ids (string) and money (integer) before they run. `tsx` starts fast and needs no build step in development. `tsc` builds the version that runs in Docker later. `strict` and `noUncheckedIndexedAccess` are on.
+- Trade-offs: a build step for the container image; relative imports must end in `.js` (NodeNext).
+
+## D-21: Three layers: routes, controllers, services
+
+- Date: 2026-11-15
+- Alternatives: all logic inside route files; only routes and services
+- Why: routes only map paths, controllers only read the request and send the response (no SQL), services hold the logic and SQL (no `req` or `res`). Services can later be called from the worker without Express (M6).
+- Trade-offs: three files per feature, which is more typing for small endpoints.
+
+## D-22: `not_found` error code, `rememberBase`, and trailing-slash fix for route labels
+
+- Date: 2026-11-15
+- Alternatives: let Express send its default 404 page; log the real URL as the route label
+- Why: unknown routes must use the same error format as every other error (05 section 1), so `not_found` (404) was added. Express resets `req.baseUrl` when an error happens, so `rememberBase` saves it first and the logger can build full route patterns such as `/api/events/:eventId` for errors too. The logger removes a trailing slash, so the list route is `/api/events` and not `/api/events/`. Metrics in M8 need `route` to be a pattern, never a real URL (05 section 10.2).
+- Trade-offs: each mounted router needs `rememberBase`. Requests that fail before a route matches (for example broken JSON) log `route: "unmatched"`.
