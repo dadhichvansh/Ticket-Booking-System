@@ -155,7 +155,15 @@ No pagination: v1 has only a few seeded events (A-4). `totalSeats` is counted fr
 
 ### 3.4 GET `/api/events/:eventId` (FR-4), no token
 
-Success `200`: one object with the same fields as above.
+Success `200`:
+
+```json
+{
+  "event": { ... }
+}
+```
+
+The object has the same fields as one item in the list from 3.3.
 
 Errors: `400 validation_error` (id is not a number), `404 event_not_found`.
 
@@ -216,6 +224,7 @@ Errors: `400 validation_error`, `404 event_not_found`, `429 rate_limited`.
 | unauthorized (token missing or invalid) | 401  |
 | token_expired                           | 401  |
 | event_not_found                         | 404  |
+| not_found                               | 404  |
 | email_taken                             | 409  |
 | rate_limited                            | 429  |
 | internal_error                          | 500  |
