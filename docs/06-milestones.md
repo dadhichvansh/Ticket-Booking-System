@@ -49,7 +49,7 @@ Do: Express app, config from environment variables, correlation ID, JSON logs, e
 signup, login, events, event details, seat map (from PostgreSQL only, no cache yet), `/health/live`, `/health/ready`.
 Done when:
 
-- [ ] Every endpoint in 05 sections 3 and 10.1 behaves as written, including error codes.
+- [✅] Every endpoint in 05 sections 3 and 10.1 behaves as written, including error codes.
 - [✅] Passwords are stored hashed (check the table by hand).
 - [✅] Every response and every log line carries the correlation ID.
 

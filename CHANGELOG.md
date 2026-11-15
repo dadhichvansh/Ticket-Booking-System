@@ -16,4 +16,6 @@ All notable changes to this project are documented in this file.
 
 ## Application changes
 
-(Empty for now. Entries start when implementation begins in Phase 4.)
+| Date       | Milestone | Change                                                                                                                                                                                                 |
+| ---------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-11-15 | M1        | App skeleton (Express 5, TypeScript, config, JSON logs, correlation ID, error format), signup, login with JWT, event list, event details, seat map from PostgreSQL, `/health/live` and `/health/ready` |
