@@ -155,3 +155,10 @@
 - Alternatives: let Express send its default 404 page; log the real URL as the route label
 - Why: unknown routes must use the same error format as every other error (05 section 1), so `not_found` (404) was added. Express resets `req.baseUrl` when an error happens, so `rememberBase` saves it first and the logger can build full route patterns such as `/api/events/:eventId` for errors too. The logger removes a trailing slash, so the list route is `/api/events` and not `/api/events/`. Metrics in M8 need `route` to be a pattern, never a real URL (05 section 10.2).
 - Trade-offs: each mounted router needs `rememberBase`. Requests that fail before a route matches (for example broken JSON) log `route: "unmatched"`.
+
+## D-23: The mock payment service stores its data in SQLite (better-sqlite3) on a Docker volume
+
+- Date: 2026-11-16
+- Alternatives: JSON file; append-only log file; `node:sqlite` (experimental in Node 22); Redis; a second PostgreSQL
+- Why: the mock is the independent witness for NFR-2 and NFR-3 (D-16), so every charge and refund must be on disk before it replies. SQLite gives atomic transactions, and `UNIQUE` on `payment_key` and `refund_key` makes "same key twice, one charge" a database rule. A JSON file would need hand-written atomic writes and locking. Redis is restarted in failure test F4, and a second PostgreSQL costs too much RAM (D-17).
+- Trade-offs: `better-sqlite3` is a native package, so the Docker image uses a Debian-based Node image (not Alpine). Needs `journal_mode = WAL` and `synchronous = FULL` so that "written before reply" is real.
