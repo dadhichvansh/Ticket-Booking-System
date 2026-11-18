@@ -2,6 +2,7 @@ import express from 'express';
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { db } from './db.js';
 import { logger } from './logger.js';
+import { adminRouter } from './routes/admin.routes.js';
 
 export const app = express();
 
@@ -18,6 +19,8 @@ app.get('/health', (_req, res) => {
     res.status(503).json({ status: 'unavailable' });
   }
 });
+
+app.use('/admin', adminRouter);
 
 const notFound: RequestHandler = (_req, res) => {
   res
