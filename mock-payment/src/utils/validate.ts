@@ -38,3 +38,14 @@ export function parseOrThrow<T>(schema: z.ZodType<T>, data: unknown): T {
   }
   return result.data;
 }
+
+export const chargeBodySchema = z.strictObject({
+  paymentKey: z.string().min(1).max(100),
+  amountRupees: z.number().int().min(0),
+});
+
+export type ChargeBody = z.infer<typeof chargeBodySchema>;
+
+export const paymentKeyParamsSchema = z.object({
+  paymentKey: z.string().min(1).max(100),
+});

@@ -3,6 +3,8 @@ const ERROR_STATUS = {
   invalid_json: 400,
   body_too_large: 400,
   not_found: 404,
+  charge_not_found: 404,
+  amount_mismatch: 422,
   internal_error: 500,
 } as const;
 
