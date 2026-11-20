@@ -49,3 +49,15 @@ export type ChargeBody = z.infer<typeof chargeBodySchema>;
 export const paymentKeyParamsSchema = z.object({
   paymentKey: z.string().min(1).max(100),
 });
+
+export const refundBodySchema = z.strictObject({
+  refundKey: z.string().min(1).max(100),
+  paymentKey: z.string().min(1).max(100),
+  amountRupees: z.number().int().min(0),
+});
+
+export type RefundBody = z.infer<typeof refundBodySchema>;
+
+export const refundKeyParamsSchema = z.object({
+  refundKey: z.string().min(1).max(100),
+});
