@@ -19,5 +19,33 @@ services:
       timeout: 3s
       retries: 10
 
+  mock-payment:
+    build: ./mock-payment
+    image: ticketbooking-mock-payment
+    container_name: ticketbooking-mock-payment
+    environment:
+      PORT: 4000
+      LOG_LEVEL: info
+      DB_PATH: /data/mock.db
+    ports:
+      # Localhost only, for my curl tests. Not reachable from other machines.
+      - '127.0.0.1:4000:4000'
+    volumes:
+      - mockdata:/data
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
 volumes:
   pgdata:
+  mockdata:
