@@ -16,6 +16,7 @@ All notable changes to this project are documented in this file.
 
 ## Application changes
 
-| Date       | Milestone | Change                                                                                                                                                                                                 |
-| ---------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 2026-11-15 | M1        | App skeleton (Express 5, TypeScript, config, JSON logs, correlation ID, error format), signup, login with JWT, event list, event details, seat map from PostgreSQL, `/health/live` and `/health/ready` |
+| Date       | Milestone | Change                                                                                                                                                                                                                                                                            |
+| ---------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-15 | M1        | App skeleton (Express 5, TypeScript, config, JSON logs, correlation ID, error format), signup, login with JWT, event list, event details, seat map from PostgreSQL, `/health/live` and `/health/ready`                                                                            |
+| 2026-11-21 | M2        | Mock payment service (own container, SQLite on a Docker volume): charges, refunds, ledger, reset, failure modes (`always_fail`, `timeout_after_charge`, `crash_after_charge`, `crash_before_charge`), Dockerfile, compose service with health check and `restart: unless-stopped` |

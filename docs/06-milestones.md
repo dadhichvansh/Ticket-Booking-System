@@ -61,7 +61,7 @@ Done when:
 - [✅] Same `paymentKey` twice charges once; same `refundKey` twice refunds once.
 - [✅] `GET /charges/:key` returns `404` for an unknown key.
 - [✅] Each `chargeMode` works, including `timeout_after_charge` and `crash_after_charge`.
-- [ ] `/admin/ledger` and `/admin/reset` work, and the ledger survives a restart of the mock.
+- [✅] `/admin/ledger` and `/admin/reset` work, and the ledger survives a restart of the mock.
 
 ## M3: Naive baseline (database only) and test tools
 
