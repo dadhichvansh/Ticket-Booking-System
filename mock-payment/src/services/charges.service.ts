@@ -1,6 +1,7 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 import { db } from '../db.js';
 import { AppError } from '../errors.js';
+import { logger } from '../logger.js';
 import type { ChargeBody } from '../utils/validate.js';
 import { getSettings } from './settings.service.js';
 
@@ -46,11 +47,24 @@ function toReply(row: ChargeRow): ChargeReply {
   return { status: 'processing' };
 }
 
+// Test only (05 section 8.3). Exits at once, without the clean shutdown.
+function crashNow(mode: string): never {
+  logger.warn({ mode }, 'chargeMode: crashing on purpose');
+  process.exit(1);
+}
+
+// Test only. A promise that never finishes, so no reply is ever sent
+// and the client has to give up by itself (timeout).
+function neverReply(): Promise<never> {
+  return new Promise<never>(() => {});
+}
+
 export async function createCharge({
   paymentKey,
   amountRupees,
 }: ChargeBody): Promise<ChargeReply> {
-  // Known key: never charge again, answer from what is saved
+  // Known key: never charge again, answer from what is saved.
+  // This runs before any chargeMode logic, in every mode.
   const existing = findCharge.get(paymentKey) as ChargeRow | undefined;
   if (existing) {
     if (existing.amount_rupees !== amountRupees) {
@@ -64,7 +78,15 @@ export async function createCharge({
 
   // New key. Decide the result first, using the current settings
   const settings = getSettings();
-  const willFail = Math.random() < settings.failureRate;
+
+  // Exits before anything is saved: the mock never "received" this key
+  if (settings.chargeMode === 'crash_before_charge') {
+    crashNow(settings.chargeMode);
+  }
+
+  const willFail =
+    settings.chargeMode === 'always_fail' ||
+    Math.random() < settings.failureRate;
   const delayMs =
     settings.minDelayMs +
     Math.random() * (settings.maxDelayMs - settings.minDelayMs);
@@ -82,7 +104,17 @@ export async function createCharge({
     return { status: 'failed', reason: 'card_declined' };
   }
 
+  // The charge is saved (on disk, synchronous = FULL) before any of this
   saveResult.run('succeeded', null, id);
+
+  if (settings.chargeMode === 'crash_after_charge') {
+    crashNow(settings.chargeMode);
+  }
+  if (settings.chargeMode === 'timeout_after_charge') {
+    logger.warn({ paymentKey }, 'chargeMode: charge saved, reply never sent');
+    return neverReply();
+  }
+
   return { status: 'succeeded', chargeId: `ch_${id}` };
 }
 
