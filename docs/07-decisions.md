@@ -162,3 +162,17 @@
 - Alternatives: JSON file; append-only log file; `node:sqlite` (experimental in Node 22); Redis; a second PostgreSQL
 - Why: the mock is the independent witness for NFR-2 and NFR-3 (D-16), so every charge and refund must be on disk before it replies. SQLite gives atomic transactions, and `UNIQUE` on `payment_key` and `refund_key` makes "same key twice, one charge" a database rule. A JSON file would need hand-written atomic writes and locking. Redis is restarted in failure test F4, and a second PostgreSQL costs too much RAM (D-17).
 - Trade-offs: `better-sqlite3` is a native package, so the Docker image uses a Debian-based Node image (not Alpine). Needs `journal_mode = WAL` and `synchronous = FULL` so that "written before reply" is real.
+
+## D-24: The naive baseline lives in one folder, `src/baseline/`
+
+- Date: 2026-11-22
+- Alternatives: baseline code mixed into the normal routes, controllers and services
+- Why: D-18 says the baseline is deleted in M4. One folder with one mount line in `app.ts` means deleting it cannot break real code. It has no Redis, no idempotency and no rate limit, because that is the "before" picture.
+- Trade-offs: the baseline duplicates a little logic that the real flow will rewrite in M4 and M5.
+
+## D-25: k6 runs on Windows, and the stampede users are created through real signup and login
+
+- Date: 2026-11-22
+- Alternatives: k6 in Docker; users inserted by SQL with minted tokens
+- Why: Docker is limited to 6 GB (D-17), so k6 runs on the host. Real signup and login keeps the test honest and uses the same path a user would. Users are created in small batches (D-12).
+- Trade-offs: setup is slow because argon2 uses CPU and memory. k6 shares the CPU with the app, and this is written in 09-benchmarks.md.
