@@ -7,6 +7,7 @@ import { rememberBase } from './middleware/rememberBase.js';
 import { healthRouter } from './routes/health.routes.js';
 import { authRouter } from './routes/auth.routes.js';
 import { eventsRouter } from './routes/events.routes.js';
+import { baselineRouter } from './baseline/baseline.routes.js';
 
 export const app = express();
 
@@ -17,6 +18,9 @@ app.use('/health', healthRouter);
 app.use(express.json({ limit: '10kb' }));
 app.use('/api/auth', rememberBase, authRouter);
 app.use('/api/events', rememberBase, eventsRouter);
+
+// BASELINE ONLY (D-24). Delete this line and src/baseline/ in M4.
+app.use('/api/baseline', rememberBase, baselineRouter);
 
 app.use(notFound);
 app.use(errorHandler); // always last

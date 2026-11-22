@@ -27,3 +27,16 @@ export function parseOrThrow<T>(schema: z.ZodType<T>, data: unknown): T {
 export const eventIdParamsSchema = z.object({
   eventId: z.string().regex(/^\d{1,18}$/, 'must be a positive whole number'),
 });
+
+// Same rule as eventId: digits only, at most 18 digits, so it fits in BIGINT.
+const idString = z
+  .string()
+  .regex(/^\d{1,18}$/, 'must be a positive whole number');
+
+// Body of POST /api/holds (05 section 7.2). The baseline uses the same shape.
+export const holdBodySchema = z.object({
+  eventId: idString,
+  seatId: idString,
+});
+
+export type HoldBody = z.infer<typeof holdBodySchema>;

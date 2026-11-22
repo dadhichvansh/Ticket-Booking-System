@@ -6,6 +6,8 @@ const ERROR_STATUS = {
   not_found: 404,
   event_not_found: 404,
   email_taken: 409,
+  seat_not_found: 404,
+  seat_taken: 409,
   rate_limited: 429,
   internal_error: 500,
 } as const;
