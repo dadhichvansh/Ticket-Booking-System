@@ -17,6 +17,9 @@ const envSchema = z.object({
     .string()
     .min(32, 'JWT_SECRET must be at least 32 characters long'),
   JWT_EXPIRES_IN_SECONDS: z.coerce.number().int().positive().default(3600),
+
+  MOCK_PAYMENT_URL: z.url().default('http://127.0.0.1:4000'),
+  PAYMENT_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
 });
 
 const result = envSchema.safeParse(process.env);
