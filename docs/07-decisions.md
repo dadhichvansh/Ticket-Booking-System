@@ -176,3 +176,10 @@
 - Alternatives: k6 in Docker; users inserted by SQL with minted tokens
 - Why: Docker is limited to 6 GB (D-17), so k6 runs on the host. Real signup and login keeps the test honest and uses the same path a user would. Users are created in small batches (D-12).
 - Trade-offs: setup is slow because argon2 uses CPU and memory. k6 shares the CPU with the app, and this is written in 09-benchmarks.md.
+
+## D-26: The baseline pay endpoint writes naive `payments` rows
+
+- Date: 2026-11-24
+- Alternatives: baseline pay writes no `payments` row (smaller code)
+- Why: with no `payments` rows, the NFR-2 audit queries would read an empty table and pass without checking anything. A naive row (call the mock first, then one transaction that confirms the booking and inserts the payment) lets the audit see the real gap, so benchmark B1 is an honest "before" for M5 and M6.
+- Trade-offs: the baseline has no write-first step, no idempotency and no recovery job, so a crash or timeout after a successful charge can leave money taken with no booking. This is expected in B1 and is closed in M5 and M6. If a charge succeeds but the booking update changes 0 rows, the payment row is saved with `booking_id` NULL and the answer is `409 seat_lost`, so the audit can see it.
