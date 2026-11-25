@@ -39,4 +39,9 @@ export const holdBodySchema = z.object({
   seatId: idString,
 });
 
+// :bookingId from the URL (05 section 7.5). Same rule as the other ids.
+export const bookingIdParamsSchema = z.object({
+  bookingId: idString,
+});
+
 export type HoldBody = z.infer<typeof holdBodySchema>;

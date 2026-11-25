@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { query, withTransaction } from '../db.js';
 import { AppError } from '../errors.js';
 import { logger } from '../logger.js';
-import { chargePayment } from '../services/mockPayment.client.js';
+import {
+  chargePayment,
+  refundPayment,
+} from '../services/mockPayment.client.js';
 
 // BASELINE ONLY (D-18, D-24). Deleted in M4.
 
@@ -158,4 +161,108 @@ export async function payForHold(
       priceRupees: price,
     },
   };
+}
+
+// ---------------------------------------------------------------
+// Baseline cancel (D-27). Naive on purpose: the refund runs inside the
+// request, a failed or unknown refund is not retried and leaves no
+// refunds row. M5 and M6 close these gaps.
+// ---------------------------------------------------------------
+
+export type CancelResult = {
+  id: string;
+  eventId: string;
+  seatId: string;
+  status: 'cancelled' | 'refunded';
+};
+
+export async function cancelBooking(
+  userId: string,
+  bookingId: string,
+): Promise<CancelResult> {
+  // 1. Guarded update: only this user's confirmed booking. The seat is
+  // free as soon as this statement commits (FR-20).
+  const cancelled = await query<{
+    id: string;
+    event_id: string;
+    seat_id: string;
+  }>(
+    `UPDATE bookings SET status = 'cancelled', updated_at = now()
+     WHERE id = $1 AND user_id = $2 AND status = 'confirmed'
+     RETURNING id, event_id, seat_id`,
+    [bookingId, userId],
+  );
+  const booking = cancelled[0];
+
+  if (!booking) {
+    // 0 rows changed. Not found (or not yours) is different from "not confirmed".
+    const existing = await query<{ status: string }>(
+      'SELECT status FROM bookings WHERE id = $1 AND user_id = $2',
+      [bookingId, userId],
+    );
+    if (!existing[0]) {
+      throw new AppError('booking_not_found', 'Booking not found');
+    }
+    throw new AppError(
+      'booking_not_cancellable',
+      'Only a confirmed booking can be cancelled',
+    );
+  }
+
+  // 2. The payment that bought this booking
+  const payments = await query<{
+    id: string;
+    payment_key: string;
+    amount_rupees: number;
+  }>(
+    `SELECT id, payment_key, amount_rupees FROM payments
+     WHERE booking_id = $1 AND status = 'succeeded'`,
+    [booking.id],
+  );
+  const payment = payments[0];
+  // Cannot happen for bookings made by baseline pay. Loud on purpose.
+  if (!payment) {
+    throw new Error('confirmed booking has no succeeded payment');
+  }
+
+  const base = {
+    id: booking.id,
+    eventId: booking.event_id,
+    seatId: booking.seat_id,
+  };
+
+  // 3. Refund through the mock. No database connection is held while we wait.
+  const refundKey = `ref_${randomUUID()}`;
+  const refund = await refundPayment(
+    refundKey,
+    payment.payment_key,
+    payment.amount_rupees,
+  );
+
+  // Failed or unknown: the baseline saves nothing and does not retry.
+  // The booking stays 'cancelled' with no refunds row (the NFR-3 gap).
+  if (refund.outcome !== 'succeeded') {
+    logger.warn(
+      { bookingId: booking.id, refundKey, outcome: refund.outcome },
+      'baseline cancel: refund not done',
+    );
+    return { ...base, status: 'cancelled' };
+  }
+
+  // 4. Refund succeeded: save the refund and mark the booking refunded together
+  await withTransaction(async (client) => {
+    await client.query(
+      `INSERT INTO refunds
+         (booking_id, payment_id, refund_key, amount_rupees, status, attempts)
+       VALUES ($1, $2, $3, $4, 'succeeded', 1)`,
+      [booking.id, payment.id, refundKey, payment.amount_rupees],
+    );
+    await client.query(
+      `UPDATE bookings SET status = 'refunded', updated_at = now()
+       WHERE id = $1 AND status = 'cancelled'`,
+      [booking.id],
+    );
+  });
+
+  return { ...base, status: 'refunded' };
 }

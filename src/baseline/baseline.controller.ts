@@ -1,6 +1,10 @@
 import type { Request, Response } from 'express';
 import { AppError } from '../errors.js';
-import { holdBodySchema, parseOrThrow } from '../utils/validate.js';
+import {
+  bookingIdParamsSchema,
+  holdBodySchema,
+  parseOrThrow,
+} from '../utils/validate.js';
 import * as baselineService from './baseline.service.js';
 
 export const createHoldController = async (
@@ -33,4 +37,16 @@ export const createPaymentController = async (
     return;
   }
   res.status(201).json({ booking: result.booking });
+};
+
+export const cancelBookingController = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const userId = req.user?.id;
+  if (!userId) throw new AppError('unauthorized', 'Missing user');
+
+  const { bookingId } = parseOrThrow(bookingIdParamsSchema, req.params);
+  const booking = await baselineService.cancelBooking(userId, bookingId);
+  res.status(200).json({ booking });
 };
