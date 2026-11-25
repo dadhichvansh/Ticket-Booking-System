@@ -183,3 +183,10 @@
 - Alternatives: baseline pay writes no `payments` row (smaller code)
 - Why: with no `payments` rows, the NFR-2 audit queries would read an empty table and pass without checking anything. A naive row (call the mock first, then one transaction that confirms the booking and inserts the payment) lets the audit see the real gap, so benchmark B1 is an honest "before" for M5 and M6.
 - Trade-offs: the baseline has no write-first step, no idempotency and no recovery job, so a crash or timeout after a successful charge can leave money taken with no booking. This is expected in B1 and is closed in M5 and M6. If a charge succeeds but the booking update changes 0 rows, the payment row is saved with `booking_id` NULL and the answer is `409 seat_lost`, so the audit can see it.
+
+## D-27: The baseline cancel refunds inside the request and has no retry
+
+- Date: 2026-11-24
+- Alternatives: baseline cancel only changes the booking status and never calls the mock refund
+- Why: without a refund call, the NFR-2 and NFR-3 audit queries would flag every cancelled booking and show nothing useful. With a naive refund call (cancel first, then refund, then one transaction that saves the refund row and sets `refunded`), the audit sees a real gap when the refund fails.
+- Trade-offs: the refund happens inside the request, which the final design does not do (M5 and M6 use outbox rows and the worker). If the refund fails or the result is unknown, the booking stays `cancelled` with no `refunds` row and nothing retries. This is expected in B1 and is closed in M5 and M6.
