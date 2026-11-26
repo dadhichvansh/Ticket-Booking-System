@@ -190,3 +190,10 @@
 - Alternatives: baseline cancel only changes the booking status and never calls the mock refund
 - Why: without a refund call, the NFR-2 and NFR-3 audit queries would flag every cancelled booking and show nothing useful. With a naive refund call (cancel first, then refund, then one transaction that saves the refund row and sets `refunded`), the audit sees a real gap when the refund fails.
 - Trade-offs: the refund happens inside the request, which the final design does not do (M5 and M6 use outbox rows and the worker). If the refund fails or the result is unknown, the booking stays `cancelled` with no `refunds` row and nothing retries. This is expected in B1 and is closed in M5 and M6.
+
+## D-28: The baseline sweep deletes expired `pending` holds, lazily, one seat at a time
+
+- Date: 2026-11-25
+- Alternatives: the sweep sets expired `pending` rows to `cancelled` (as D-18 first described); a timer that sweeps all seats every few seconds
+- Why: a `cancelled` row with no payment and no refund would be flagged by the NFR-2 audit query B for every expired hold. An expired hold never had a payment, so deleting it loses nothing and keeps the audit queries from 04 unchanged. Running the delete for one seat right before the hold insert uses the unique index on `seat_id`, needs no timer, and keeps all baseline code inside `src/baseline/` (D-24).
+- Trade-offs: the seat map shows an expired baseline hold as booked until someone tries to hold that seat, so NFR-14 is not met in the baseline. This is expected in B1. If the sweep deletes a hold while its owner is paying, the charge can succeed with no booking (`409 seat_lost`, `payments.booking_id` NULL). The audit sees it, and M4 to M6 close it.
