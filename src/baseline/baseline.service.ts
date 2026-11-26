@@ -29,6 +29,15 @@ export async function createHold(
   eventId: string,
   seatId: string,
 ) {
+  // Sweep (D-28): an expired hold on THIS seat is deleted first, so the seat
+  // can be taken again. Only `pending` rows are touched, never a confirmed booking.
+  await query(
+    `DELETE FROM bookings
+     WHERE seat_id = $1 AND status = 'pending'
+       AND created_at <= now() - make_interval(secs => $2)`,
+    [seatId, HOLD_SECONDS],
+  );
+
   try {
     const rows = await query<InsertedRow>(
       `INSERT INTO bookings (user_id, event_id, seat_id, status)
