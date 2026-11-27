@@ -7,3 +7,4 @@ mock-payment/data/
 *.db
 *.db-wal
 *.db-shm
+loadtest/tokens.json
