@@ -197,3 +197,10 @@
 - Alternatives: the sweep sets expired `pending` rows to `cancelled` (as D-18 first described); a timer that sweeps all seats every few seconds
 - Why: a `cancelled` row with no payment and no refund would be flagged by the NFR-2 audit query B for every expired hold. An expired hold never had a payment, so deleting it loses nothing and keeps the audit queries from 04 unchanged. Running the delete for one seat right before the hold insert uses the unique index on `seat_id`, needs no timer, and keeps all baseline code inside `src/baseline/` (D-24).
 - Trade-offs: the seat map shows an expired baseline hold as booked until someone tries to hold that seat, so NFR-14 is not met in the baseline. This is expected in B1. If the sweep deletes a hold while its owner is paying, the charge can succeed with no booking (`409 seat_lost`, `payments.booking_id` NULL). The audit sees it, and M4 to M6 close it.
+
+## D-29: The stampede users are created by a Node script, and their tokens are saved to a file
+
+- Date: 2026-11-26
+- Alternatives: create the users in the k6 `setup()` function; insert users by SQL with minted tokens (already rejected in D-25)
+- Why: argon2 makes signup and login slow (D-12), and k6's `setup()` has a time limit and runs once per test, so a failure would force a full rerun. A separate script is resumable: emails are fixed (`stampede-N@example.com`), an existing user (409) is only logged in, and the tokens go to `loadtest/tokens.json` for k6 to read. It uses the real signup and login (D-25).
+- Trade-offs: one more script to run before each benchmark. Tokens expire, so the script is run again before a benchmark if the earlier tokens are older than `JWT_EXPIRES_IN_SECONDS`. The token file is listed in `.gitignore`.
